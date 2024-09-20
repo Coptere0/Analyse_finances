@@ -36,7 +36,7 @@ st.markdown(page_bg_img, unsafe_allow_html=True)
 # ---------------------------------------------------------------------------------------------------------------------#
 
 with st.sidebar:
-    st.title("Déposez le fichier Excel")
+    st.title("Déposez le fichier Excel complété")
     doc = st.file_uploader("Déposer le fichier Excel complété", type=['xlsx'], label_visibility="collapsed")
     _, dict_users = gd.get_user(doc)
     users = [user for _, user in dict_users.items()][0]

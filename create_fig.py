@@ -1,7 +1,11 @@
+from cProfile import label
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+from streamlit import title
+
 import get_data as gd
 from plotly.subplots import make_subplots
 
@@ -133,7 +137,7 @@ def create_bar_dep(dict_df_dep, user, mois, annee):
 
     graph = go.Figure()
     graph.add_trace(go.Bar(x=dep_mois['Catégorie'], y=dep_mois[f'Depenses_{user}'],
-                              name="Dépenses du mois"))
+                              name="Dépenses du mois", text=dep_mois[f'Depenses_{user}']))
 
     graph.update_layout(
         paper_bgcolor="rgba(2, 7, 111, 0.26)",
@@ -153,8 +157,9 @@ def create_bar_dep(dict_df_dep, user, mois, annee):
     )
     graph.update_traces(textposition='outside',
                            textfont_size=11,
-                           textangle=90,
+                           textangle=0,
                            cliponaxis=False,
+                        texttemplate="%{y:}€",
                             )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=False)
@@ -168,7 +173,7 @@ def create_bar_rev(dict_df_rev, user, mois, annee):
 
     graph = go.Figure()
     graph.add_trace(go.Bar(x=rev_mois['Catégorie'], y=rev_mois[f'Montant'],
-                              name="Revenus du mois"))
+                              name="Revenus du mois", text=rev_mois[f'Montant']))
     graph.update_layout(
         paper_bgcolor="rgba(2, 7, 111, 0.26)",
         plot_bgcolor="rgba(0, 0, 0, 0)",
@@ -187,8 +192,9 @@ def create_bar_rev(dict_df_rev, user, mois, annee):
     )
     graph.update_traces(textposition='outside',
                            textfont_size=11,
-                           textangle=90,
+                           textangle=0,
                            cliponaxis=False,
+                        texttemplate="%{y:}€",
                            )
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
 
@@ -207,7 +213,8 @@ def create_line_dep(dict_df_dep, user, start, end):
     graph.update_layout(paper_bgcolor="rgba(8, 13, 159, 0.14)",
                         plot_bgcolor="rgba(8, 13, 159, 0)",
                         legend_bgcolor="rgba(8, 13, 159, 0)",
-                        yaxis=dict(range=[-50, df[f'Depenses_{user}'].max()+100])
+                        yaxis=dict(range=[-50, df[f'Depenses_{user}'].max()+100]),
+                        margin=dict(l=20, r=20, t=50, b=20),
                         )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
@@ -226,7 +233,8 @@ def create_line_rev(dict_df_rev, user, start, end):
     graph.update_layout(paper_bgcolor="rgba(8, 13, 159, 0.14)",
                         plot_bgcolor="rgba(8, 13, 159, 0)",
                         legend_bgcolor="rgba(8, 13, 159, 0)",
-                        yaxis=dict(range=[-50, df['Montant'].max()+500])
+                        yaxis=dict(range=[-50, df['Montant'].max()+500]),
+                        margin=dict(l=20, r=20, t=50, b=20),
                         )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
@@ -242,14 +250,14 @@ def create_line_dep_cat(dict_df_dep, user, start, end, cat):
     df["MA"] = df["MA"].apply(lambda x: str(x))
 
     graph = px.line(df, x='MA', y=f'Depenses_{user}',
-                       title=f"Dépenses totales par catégorie :",
                        labels={'MA': '', f'Depenses_{user}': 'Dépenses mensuelles (€)'}, markers=True, height=300,
-                    color="Catégorie")
+                    color="Catégorie", title="Dépenses mensuelles par catégorie")
 
     graph.update_layout(paper_bgcolor="rgba(8, 13, 159, 0.14)",
                         plot_bgcolor="rgba(8, 13, 159, 0)",
                         legend_bgcolor="rgba(8, 13, 159, 0)",
-                        yaxis=dict(range=[-50, df[f'Depenses_{user}'].max() + 100])
+                        yaxis=dict(range=[-50, df[f'Depenses_{user}'].max() + 100]),
+                        margin = dict(l=20, r=20, t=50, b=20),
                         )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
@@ -264,14 +272,14 @@ def create_line_rev_cat(dict_df_rev, user, start, end, cat):
     df = gd.add_nul(df, start, end)
     df["MA"] = df["MA"].astype(str)
     graph = px.line(df, x='MA', y=f'Montant',
-                       title=f"Revenus totaux par catégories :",
                        labels={'MA': '', f'Montant': 'Revenus mensuels (€)'}, height=300, markers=True,
-                    color="Catégorie")
+                    title="Revenus mensuels par catégorie", color="Catégorie")
 
     graph.update_layout(paper_bgcolor="rgba(8, 13, 159, 0.14)",
                         plot_bgcolor="rgba(8, 13, 159, 0)",
                         legend_bgcolor="rgba(8, 13, 159, 0)",
                         yaxis=dict(range=[-50, df[f'Montant'].max() + df[f'Montant'].mean()]),
+                        margin=dict(l=20, r=20, t=50, b=20),
                         )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
@@ -336,3 +344,61 @@ def create_line_tau_epar(dict_df_dep, dict_df_rev, user, start, end):
                         )
 
     return st.plotly_chart(graph, use_container_width=True, use_container_height=True)
+
+def create_bar_dep_moy(dict_df_dep, user, start, end, cat):
+    df_dep_user = dict_df_dep.get(user).copy()
+    mask = (df_dep_user["MA"] >= start) & (df_dep_user["MA"] <= end) & (df_dep_user["Catégorie"].isin(cat))
+    df = df_dep_user.loc[mask,["Catégorie", "MA", f"Depenses_{user}"]].groupby(["Catégorie","MA"], as_index=False).sum()
+    df = gd.add_nul(df, start, end)
+    print(df)
+    df = df.groupby(["Catégorie"], as_index=False).mean()
+    print(df)
+
+    graph = go.Figure()
+    graph.add_trace(go.Bar(x=df['Catégorie'], y=df[f'Depenses_{user}'],
+                           name="Dépenses mensuelles moyennes", text=df[f'Depenses_{user}']))
+
+    graph.update_layout(
+        paper_bgcolor="rgba(2, 7, 111, 0.26)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        height=320,
+        margin=dict(l=20, r=20, t=50, b=20),
+        title="Dépenses mensuelles moyennes par catégorie",
+
+    )
+    graph.update_traces(textposition='outside',
+                        textfont_size=11,
+                        textangle=0,
+                        cliponaxis=False,
+                        texttemplate="%{y:.2f}€"
+                        )
+
+    return st.plotly_chart(graph, use_container_width=True, use_container_height=False)
+
+def create_bar_rev_moy(dict_df_dep, user, start, end, cat):
+    df_rev_user = dict_df_dep.get(user).copy()
+    mask = (df_rev_user["MA"] >= start) & (df_rev_user["MA"] <= end) & (df_rev_user["Catégorie"].isin(cat))
+    df = df_rev_user.loc[mask,["Catégorie", "MA", f"Montant"]].groupby(["Catégorie","MA"], as_index=False).sum()
+    df = gd.add_nul(df, start, end)
+    df = df.groupby(["Catégorie"], as_index=False).mean()
+
+    graph = go.Figure()
+    graph.add_trace(go.Bar(x=df['Catégorie'], y=df[f'Montant'],
+                           name="Revenus mensuels moyens", text=df["Montant"]))
+
+    graph.update_layout(
+        paper_bgcolor="rgba(2, 7, 111, 0.26)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        height=320,
+        margin=dict(l=20, r=20, t=50, b=20),
+        title="Revenus mensuels moyens par catégorie",
+
+    )
+    graph.update_traces(textposition='outside',
+                        textfont_size=11,
+                        textangle=0,
+                        cliponaxis=False,
+                        texttemplate="%{y:.2f}€"
+                        )
+
+    return st.plotly_chart(graph, use_container_width=True, use_container_height=False)

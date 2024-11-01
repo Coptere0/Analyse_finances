@@ -2,6 +2,8 @@ import pandas as pd
 import streamlit as st
 import datetime
 
+from tenacity import wait_none
+
 import create_fig as cf
 import get_data as gd
 
@@ -36,8 +38,9 @@ st.markdown(page_bg_img, unsafe_allow_html=True)
 # ---------------------------------------------------------------------------------------------------------------------#
 
 with st.sidebar:
-    st.title("Déposez le fichier Excel complété ")
-    doc = st.file_uploader("Déposer le fichier Excel complété", type=['xlsx'], label_visibility="collapsed")
+    st.title("Déposez le fichier Excel")
+    doc = st.file_uploader("Déposer le fichier excel", type=['xlsx'], label_visibility="collapsed")
+
     _, dict_users = gd.get_user(doc)
     users = [user for _, user in dict_users.items()][0]
     param = st.expander("Paramètres")
@@ -53,7 +56,7 @@ with st.sidebar:
     #st.text(dict_users)
 col1, col2 = st.columns([6, 1],)
 col1.title("Analyse des finances")
-user = col2.selectbox("Utilisateur", dict_users.values(), placeholder="Utilisateur", index=None, label_visibility="collapsed"  )
+user = col2.selectbox("Utilisateur", dict_users.values(), placeholder="Utilisateur", label_visibility="collapsed"  )
 
 
 
@@ -67,18 +70,19 @@ user = col2.selectbox("Utilisateur", dict_users.values(), placeholder="Utilisate
 # Récupération des dépenses
 dict_df_dep = gd.clean_dep(doc, dict_users) # Dict avec les différents DF depenses
 df_dep_user = dict_df_dep.get(user)  # DF des dépenses de l'user choisit
-#Récupération des revenus
+#Récupération des a
 dict_df_rev = gd.clean_rev(doc, dict_users) # Dict avec les différents DF revenus
 df_rev_user = dict_df_rev.get(user)  # DF des revenus de l'user choisit
 df_epar_user = gd.calc_epar_user(df_dep_user, df_rev_user, user)
 
-
+print(df_dep_user)
 
 
 #Récupération des investissement
 
 # Plage de visualisation possible
 plage_mois_user = df_dep_user["MA"].sort_values(ascending=False).unique()
+print(plage_mois_user)
 
 #----------------------------------------------------------------------------------------------------------------------#
 #                                           Paramètres des tabs                                                        #
@@ -123,12 +127,13 @@ with tab_1:
             cat_dep = st.multiselect("Catégories :", df_dep_user["Catégorie"].sort_values(ascending=True, ).unique(),
                                      label_visibility='collapsed')
             cf.create_line_dep_cat(dict_df_dep, user, start=start_glob, end=end_glob, cat=cat_dep)
-
+            cf.create_bar_dep_moy(dict_df_dep, user, start=start_glob, end=end_glob, cat=cat_dep)
         with col_glob_rev:
             cf.create_line_rev(dict_df_rev, user, start_glob, end_glob)
-            cat_dep = st.multiselect("Catégories :", df_rev_user["Catégorie"].sort_values(ascending=True, ).unique(),
+            cat_rev = st.multiselect("Catégories :", df_rev_user["Catégorie"].sort_values(ascending=True, ).unique(),
                                      label_visibility='collapsed')
-            cf.create_line_rev_cat(dict_df_rev, user, start_glob, end_glob, cat=cat_dep)
+            cf.create_line_rev_cat(dict_df_rev, user, start_glob, end_glob, cat=cat_rev)
+            cf.create_bar_rev_moy(dict_df_rev, user, start_glob, end_glob, cat_rev)
 
 
         #col_dep, col_rev = st.columns([1, 1],)
